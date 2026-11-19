@@ -1,0 +1,26 @@
+[project]
+name = "gosmart-clinical-nlu"
+version = "0.1.0"
+description = "Clinical NLU library shared across peer projects"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "dateparser>=1.5.1",
+    "pydantic>=2.14.4",
+    "spacy>=3.8.18",
+]
+
+[project.scripts]
+gosmart-clinical-nlu = "gosmart_clinical_nlu:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gosmart_clinical_nlu"]
