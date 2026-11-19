@@ -36,16 +36,43 @@ uv build                               # build sdist + wheel for distribution
 
 ## Using from a peer project
 
-Install from a Git remote or a local path:
+Add the package straight from GitHub (no PyPI release required):
 
 ```bash
-uv add "gosmart-clinical-nlu @ git+https://<host>/<org>/gosmart-clinical-nlu.git"
-# or, locally:
+# from the default branch (main)
+uv add "gosmart-clinical-nlu @ git+https://github.com/gosmart-health/gosmart-clinical-nlu.git"
+
+# from the dev branch
+uv add "gosmart-clinical-nlu @ git+https://github.com/gosmart-health/gosmart-clinical-nlu.git@dev"
+
+# pinned to a tag/release
+uv add "gosmart-clinical-nlu @ git+https://github.com/gosmart-health/gosmart-clinical-nlu.git@v0.1.0"
+
+# or, while iterating locally on a sibling clone
 uv add --editable ../gosmart-clinical-nlu
 ```
 
-Then import it:
+### Importing the package
+
+The distribution name is `gosmart-clinical-nlu`, but Python module names
+cannot contain hyphens, so the import name is `gosmart_clinical_nlu`:
 
 ```python
-from gosmart_clinical_nlu import print_hi, __version__
+import gosmart_clinical_nlu
+
+gosmart_clinical_nlu.__version__          # '0.1.0'
+
+# The public API is re-exported at the package root:
+from gosmart_clinical_nlu import print_hi
+
+print_hi("peer project")                  # Hi, peer project
+```
+
+### Running it
+
+After `uv sync` inside a clone of this repo:
+
+```bash
+uv run gosmart-clinical-nlu               # console entry point
+uv run python -m gosmart_clinical_nlu     # equivalent, via module execution
 ```

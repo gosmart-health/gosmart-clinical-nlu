@@ -3,6 +3,8 @@ name = "gosmart-clinical-nlu"
 version = "0.1.0"
 description = "Clinical NLU library shared across peer projects"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.14"
 dependencies = [
     "dateparser>=1.5.1",
