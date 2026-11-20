@@ -41,6 +41,23 @@ uv run python -m gosmart_clinical_nlu  # same thing, via module execution
 uv build                               # build sdist + wheel for distribution
 ```
 
+## Continuous integration
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push to
+`main`, on every **pull request targeting `dev` or `main`** (feature branches
+into `dev`, and `dev` → `main`), and on manual `workflow_dispatch`. It is a
+**Linux-only** workflow (single `ubuntu-latest` job, no macos/Windows targets)
+that:
+
+1. installs `uv` and Python 3.14 (`astral-sh/setup-uv`, version kept in sync
+   with `.python-version`),
+2. installs the project with locked dependencies (`uv sync --locked` — fails
+   when `uv.lock` is out of date),
+3. runs the ruff lint/format gate,
+4. runs the unit tests (`uv run pytest`),
+5. builds the sdist and wheel (`uv build`) and uploads them as a workflow
+   artifact named `dist-<commit sha>`.
+
 ## Intent NLU
 
 The package turns free-text clinical utterances into validated, per-intent
