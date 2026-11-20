@@ -12,10 +12,17 @@ package rather than the working directory:
 .
 ├── src/
 │   └── gosmart_clinical_nlu/   # the importable package (underscores — required by Python)
-│       ├── __init__.py
+│       ├── __init__.py         # public API re-exports
 │       ├── core.py
+│       ├── cli.py              # train / parse / inspect subcommands
+│       ├── training.py         # training-data schemas + loaders (per-intent & aggregated)
+│       ├── pipeline.py         # per-intent pipeline training + single-file bundle
+│       ├── parsing.py          # parse_utterance dispatch + result envelope
+│       ├── intents/            # per-intent pydantic slot models + registry
 │       └── __main__.py
+├── training/                   # training data (JSON) — see docs/training.md
 ├── tests/                      # test suite (pytest)
+├── docs/                       # design notes + ops guides
 ├── pyproject.toml
 └── uv.lock
 ```
@@ -33,6 +40,55 @@ uv run gosmart-clinical-nlu            # run the console entry point
 uv run python -m gosmart_clinical_nlu  # same thing, via module execution
 uv build                               # build sdist + wheel for distribution
 ```
+
+## Intent NLU
+
+The package turns free-text clinical utterances into validated, per-intent
+Pydantic structures using one self-contained spaCy pipeline per intent
+(blank `en` + `entity_ruler` slot patterns + a one-vs-rest `textcat`
+classifier). Training data lives in `training/` as JSON; the trained result is
+packed into a single artifact file that peer projects load with
+`spacy.load()`.
+
+### Command line (repo checkout)
+
+```bash
+uv run gosmart-clinical-nlu train      # ./training -> models/intent_models.zip
+uv run gosmart-clinical-nlu inspect --model models/intent_models.zip
+uv run gosmart-clinical-nlu parse --model models/intent_models.zip \
+    "Find a CT patient 12345678 from yesterday" --ref-date 2026-11-19
+```
+
+### Python API (peer projects)
+
+```python
+from gosmart_clinical_nlu import load_intent_models, parse_utterance
+
+models = load_intent_models("models/intent_models.zip")  # once per process
+result = parse_utterance("Show me MRI for mrn 98765432 last week", models)
+
+result.status  # "matched" | "low_confidence"  <- LLM failover signal
+result.intent  # "find_study"
+result.confidence  # 0.9998 (threshold in result.threshold)
+result.candidates  # {"find_study": 0.9998, "get_report": 0.0003}
+result.data  # StudyQueryIntent(modality="MR", patient_id="98765432",
+#                study_date="20261112")  (DICOM DA)
+```
+
+`status == "matched"` requires the top intent to clear its `min_confidence`
+AND all `required_fields` to be extracted. On `low_confidence` the best-effort
+`data` is still returned and `candidates` carries every intent's score, so a
+caller can fail over to an LLM playbook with full context.
+
+### Training data and operations
+
+- Training data formats, the train/verify/deploy procedure, and
+  troubleshooting live in [`docs/training.md`](docs/training.md).
+- Architecture notes: [`docs/design_notes/intent_nlu_design.md`](docs/design_notes/intent_nlu_design.md).
+- The artifact is a ZIP of one spaCy `to_disk()` tree per intent plus a
+  `manifest.json` (spaCy version, content hash of the training data,
+  per-intent thresholds). `models/` is git-ignored — bundles are build
+  artifacts, not source.
 
 ## Using from a peer project
 
@@ -60,12 +116,12 @@ cannot contain hyphens, so the import name is `gosmart_clinical_nlu`:
 ```python
 import gosmart_clinical_nlu
 
-gosmart_clinical_nlu.__version__          # '0.1.0'
+gosmart_clinical_nlu.__version__  # '0.1.0'
 
 # The public API is re-exported at the package root:
 from gosmart_clinical_nlu import print_hi
 
-print_hi("peer project")                  # Hi, peer project
+print_hi("peer project")  # Hi, peer project
 ```
 
 ### Running it

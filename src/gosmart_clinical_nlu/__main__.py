@@ -3,4 +3,4 @@
 from gosmart_clinical_nlu import main
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
