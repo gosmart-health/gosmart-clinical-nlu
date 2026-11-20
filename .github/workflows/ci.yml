@@ -32,9 +32,11 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v7
 
-      # Keep this pin in sync with .python-version.
+      # Keep this pin in sync with .python-version. Pinned to the exact
+      # version: the floating `v10` major tag is not published upstream
+      # (only v10.x.y minors exist).
       - name: Install uv and Python
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           python-version: "3.14"
 
