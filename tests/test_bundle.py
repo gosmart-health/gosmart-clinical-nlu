@@ -5,8 +5,8 @@ import zipfile
 from pathlib import Path
 
 import pytest
-
 import spacy
+
 from gosmart_clinical_nlu.pipeline import load_intent_models, save_bundle
 
 TEXT = "Find a CT patient 12345678 from yesterday"

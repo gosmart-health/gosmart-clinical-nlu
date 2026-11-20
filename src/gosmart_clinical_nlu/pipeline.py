@@ -17,12 +17,12 @@ from importlib import metadata
 from pathlib import Path
 from random import Random
 
+import spacy
 from pydantic import BaseModel
 from spacy.language import Language
 from spacy.training import Example
 from spacy.util import fix_random_seed
 
-import spacy
 from gosmart_clinical_nlu.intents import IntentSpec, get_intent_spec
 from gosmart_clinical_nlu.training import (
     IntentTrainingSpec,

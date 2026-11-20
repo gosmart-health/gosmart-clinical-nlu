@@ -19,10 +19,9 @@ first draft:
 from datetime import datetime
 
 import dateparser
+import spacy
 from pydantic import BaseModel
 from spacy.training import Example
-
-import spacy
 
 
 # 1. Define your strict output schema (maps cleanly to FHIR / DICOM C-FIND)
