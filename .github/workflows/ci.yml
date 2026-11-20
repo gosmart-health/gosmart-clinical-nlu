@@ -1,0 +1,64 @@
+# CI for gosmart-clinical-nlu.
+#
+# Triggers:
+#   - push to main             post-merge build
+#   - pull_request -> dev      any feature branch into dev
+#   - pull_request -> main     dev into main
+#   - workflow_dispatch        manual runs
+# Scope: Linux ONLY by design — a single ubuntu job, no macos/windows
+# matrix. The package is pure Python, so one Linux build is enough.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [dev, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-build-and-test:
+    name: Build & test (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      # Keep this pin in sync with .python-version. Pinned to the exact
+      # version: the floating `v10` major tag is not published upstream
+      # (only v10.x.y minors exist).
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          python-version: "3.14"
+
+      # Fails if uv.lock is out of date with pyproject.toml.
+      - name: Install the project (locked dependencies)
+        run: uv sync --locked
+
+      # Lint gate required by AGENTS.md.
+      - name: Lint (ruff)
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Run the unit tests
+        run: uv run pytest
+
+      - name: Build sdist and wheel (Linux)
+        run: uv build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error

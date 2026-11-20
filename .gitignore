@@ -8,3 +8,11 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Trained model artifacts (produced by `gosmart-clinical-nlu train`)
+models/
+
+/ImplementationPlan.md

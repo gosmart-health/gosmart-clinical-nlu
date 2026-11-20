@@ -3,17 +3,36 @@
 The distribution name is ``gosmart-clinical-nlu``; the importable package name
 is ``gosmart_clinical_nlu`` (Python module names cannot contain hyphens).
 
-Example::
+Intent NLU quickstart::
 
-    from gosmart_clinical_nlu import print_hi, __version__
+    from gosmart_clinical_nlu import load_intent_models, parse_utterance
+
+    models = load_intent_models("models/intent_models.zip")
+    result = parse_utterance("Find a CT for patient 12345678", models)
+    if result.status == "low_confidence":
+        ...  # fail over to the LLM playbook
 """
 
+from gosmart_clinical_nlu.cli import main
 from gosmart_clinical_nlu.core import print_hi
+from gosmart_clinical_nlu.parsing import ParsedUtterance, parse_utterance
+from gosmart_clinical_nlu.pipeline import (
+    IntentModels,
+    load_intent_models,
+    save_bundle,
+    train_intent_models,
+)
+from gosmart_clinical_nlu.training import load_training_dir
 
-__all__ = ["print_hi", "main"]
+__all__ = [
+    "IntentModels",
+    "ParsedUtterance",
+    "load_intent_models",
+    "load_training_dir",
+    "main",
+    "parse_utterance",
+    "print_hi",
+    "save_bundle",
+    "train_intent_models",
+]
 __version__ = "0.1.0"
-
-
-def main() -> None:
-    """Console entry point for ``gosmart-clinical-nlu``."""
-    print_hi("gosmart-clinical-nlu")

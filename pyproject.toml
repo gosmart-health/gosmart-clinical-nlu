@@ -3,9 +3,12 @@ name = "gosmart-clinical-nlu"
 version = "0.1.0"
 description = "Clinical NLU library shared across peer projects"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.14"
 dependencies = [
     "dateparser>=1.5.1",
+    "ipykernel>=7.4.0",
     "pydantic>=2.14.4",
     "spacy>=3.8.18",
 ]
@@ -15,7 +18,9 @@ gosmart-clinical-nlu = "gosmart_clinical_nlu:main"
 
 [dependency-groups]
 dev = [
+    "jupyter>=1.1.1",
     "pytest>=8.4",
+    "ruff>=0.17.6",
 ]
 
 [build-system]
