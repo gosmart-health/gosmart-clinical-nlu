@@ -9,13 +9,13 @@ result in a :class:`ParsedUtterance` envelope whose ``status`` and
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, SerializeAsAny
 from spacy.tokens import Doc
 
-from gosmart_clinical_nlu.intents import IntentSpec, ReportQueryIntent, StudyQueryIntent
+from gosmart_clinical_nlu.intents import IntentSpec
 from gosmart_clinical_nlu.pipeline import IntentModels
 
-IntentData = StudyQueryIntent | ReportQueryIntent
+IntentData = SerializeAsAny[BaseModel]
 
 
 class ParsedUtterance(BaseModel):
@@ -25,7 +25,8 @@ class ParsedUtterance(BaseModel):
     ``min_confidence`` and every required slot was extracted; anything else is
     ``low_confidence`` and the caller should consider failing over to the LLM
     playbook. ``data`` always carries the best-effort parsed slots of the top
-    intent, and ``candidates`` carries every intent's score.
+    intent (any Pydantic :class:`~pydantic.BaseModel` subclass), and
+    ``candidates`` carries every intent's score.
     """
 
     status: Literal["matched", "low_confidence"]
@@ -74,7 +75,7 @@ def parse_utterance(
     )
 
 
-def _extract_slots(spec: IntentSpec, doc: Doc, ref_date: datetime | None) -> IntentData:
+def _extract_slots(spec: IntentSpec, doc: Doc, ref_date: datetime | None) -> BaseModel:
     """Build the intent's pydantic model from the matched entities."""
     slots: dict[str, Any] = {}
     for ent in doc.ents:

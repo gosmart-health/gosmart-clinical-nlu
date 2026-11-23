@@ -6,8 +6,20 @@ from pathlib import Path
 
 import pytest
 import spacy
+from conftest import write_training_dir
+from pydantic import BaseModel
 
-from gosmart_clinical_nlu.pipeline import load_intent_models, save_bundle
+from gosmart_clinical_nlu.intents import (
+    IntentSpec,
+    register_intent_spec,
+    unregister_intent_spec,
+)
+from gosmart_clinical_nlu.pipeline import (
+    load_intent_models,
+    save_bundle,
+    train_intent_models,
+)
+from gosmart_clinical_nlu.training import TrainingDataError, load_training_dir
 
 TEXT = "Find a CT patient 12345678 from yesterday"
 
@@ -64,3 +76,35 @@ def test_spacy_version_mismatch_warns(tmp_path: Path, models, monkeypatch) -> No
     with pytest.warns(UserWarning, match="trained with spaCy"):
         loaded = load_intent_models(out)
     assert loaded.spacy_version == models.spacy_version
+
+
+def test_load_unregistered_bundle_intent_fails(tmp_path: Path) -> None:
+    class EphemeralIntent(BaseModel):
+        note: str | None = None
+
+    spec = IntentSpec(
+        name="ephemeral_intent",
+        label="EPHEMERAL_INTENT",
+        model_cls=EphemeralIntent,
+        entity_map={},
+    )
+    register_intent_spec(spec)
+    try:
+        root = write_training_dir(tmp_path / "training")
+        extra = root / "ephemeral_intent"
+        extra.mkdir()
+        (extra / "intent.json").write_text(
+            json.dumps({"name": "ephemeral_intent", "label": "EPHEMERAL_INTENT"}),
+            encoding="utf-8",
+        )
+        (extra / "examples.json").write_text(
+            json.dumps({"positive": ["trigger ephemeral intent"]}),
+            encoding="utf-8",
+        )
+        trained = train_intent_models(load_training_dir(root), epochs=5)
+        bundle = save_bundle(trained, tmp_path / "bundle.zip")
+    finally:
+        unregister_intent_spec("ephemeral_intent")
+
+    with pytest.raises(TrainingDataError, match="not registered.*register_intent_spec"):
+        load_intent_models(bundle)

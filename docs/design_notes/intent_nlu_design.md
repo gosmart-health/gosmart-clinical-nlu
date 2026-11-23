@@ -23,10 +23,34 @@ Consequences: adding an intent never retrains existing ones; entity patterns
 cannot collide across intents; per-intent thresholds; running N small
 pipelines per utterance is cheap.
 
+## Extensible intent registry & plugin discovery
+
+`gosmart_clinical_nlu.intents` maintains a thread-safe (`threading.RLock`)
+registry seeded with the built-in `INTENT_SPECS` (`find_study`, `get_report`).
+Downstream packages can register additional intents without modifying this
+library in two ways:
+
+1. **Python entry points (recommended)**: declare entries under the
+   `gosmart_clinical_nlu.intents` group in `pyproject.toml`. Each entry point
+   may resolve to an `IntentSpec`, an iterable of `IntentSpec`, or a zero-arg
+   callable returning one. Discovery (`discover_intent_specs()`) runs lazily
+   on first registry lookup (preventing import-time circular imports when a
+   plugin imports `IntentSpec` from `gosmart_clinical_nlu`) and fails fast on
+   broken or conflicting plugins.
+2. **Programmatic registration**: `register_intent_spec(spec, *, replace=False)`
+   and `unregister_intent_spec(name)`. Re-registering an equal `IntentSpec` is
+   an idempotent no-op (supporting modules that both register on import and
+   expose an entry point); conflicting names raise `ValueError` unless
+   `replace=True`.
+
 ## Result envelope (the failover contract)
 
 `ParsedUtterance` separates *routing* facts (status, intent, confidence,
 threshold, candidates, missing_required) from *slot data* (`data`).
+`data` is typed `SerializeAsAny[BaseModel] | None`: Pydantic validates that
+the payload is a `BaseModel` subclass instance while `SerializeAsAny` ensures
+`model_dump()` and `model_dump_json()` serialize the concrete runtime
+subclass's fields rather than an empty base-class `{}`.
 `status == "matched"` iff `confidence >= min_confidence` and no required slot
 is missing; otherwise `low_confidence`. Best-effort `data` is always returned,
 and `candidates` exposes the full score distribution so an LLM playbook can
@@ -39,10 +63,10 @@ intent plus `manifest.json` (schema version, package/spaCy versions, UTC
 timestamp, sha256 content hash of the canonical training JSON, and per-intent
 runtime settings). Loading unzips to a temp dir, `spacy.load()`s each tree
 (fully in-memory), applies the manifest overrides to the code-side registry
-specs, then deletes the temp dir. spaCy's `Language.from_bytes` on a fresh
-blank pipeline silently drops components (deserializers are registered from
-components already on the instance), which is why the bundle wraps
-`to_disk`/`spacy.load` instead of raw bytes.
+specs (built-in and plugin/registered), then deletes the temp dir. spaCy's
+`Language.from_bytes` on a fresh blank pipeline silently drops components
+(deserializers are registered from components already on the instance), which
+is why the bundle wraps `to_disk`/`spacy.load` instead of raw bytes.
 
 ## spaCy pitfalls found and fixed (3.8.18)
 
@@ -61,6 +85,7 @@ components already on the instance), which is why the bundle wraps
 - `pipeline.py` — `build_intent_pipeline`, `train_intent_models`,
   `save_bundle`, `load_intent_models`, manifest models.
 - `parsing.py` — `ParsedUtterance`, `parse_utterance`, slot extraction.
-- `intents/` — `IntentSpec` registry, per-intent Pydantic models, normalizers.
-- `cli.py` — `train` / `parse` / `inspect` subcommands.
-- `docs/training.md` — operator procedure.
+- `intents/` — extensible `IntentSpec` registry, entry-point discovery,
+  built-in Pydantic models, normalizers.
+- `cli.py` — `train` / `parse` / `inspect` / `list-intents` subcommands.
+- `docs/training.md` — operator & peer-project intent authoring guide.
