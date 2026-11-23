@@ -1,4 +1,4 @@
-"""Command line interface: train, parse, and inspect intent models.
+"""Command line interface: train, parse, inspect, and list registered intents.
 
 Used by developers and DevOps to produce the single-file model bundle from the
 ``training/`` directory and to smoke-test it. See ``docs/training.md`` for the
@@ -12,6 +12,11 @@ from datetime import datetime
 from importlib import metadata
 from pathlib import Path
 
+from gosmart_clinical_nlu.intents import (
+    INTENT_SPECS,
+    discover_intent_specs,
+    list_intent_specs,
+)
 from gosmart_clinical_nlu.parsing import parse_utterance
 from gosmart_clinical_nlu.pipeline import (
     load_intent_models,
@@ -33,16 +38,25 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.print_help()
         return 0
     try:
+        _discover_plugins_for_cli()
         return args.func(args)
     except (TrainingDataError, FileNotFoundError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
 
 
+def _discover_plugins_for_cli() -> None:
+    """Trigger plugin discovery upfront so broken entry points exit cleanly."""
+    try:
+        discover_intent_specs()
+    except (RuntimeError, TypeError, ValueError) as error:
+        raise TrainingDataError(str(error)) from None
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="gosmart-clinical-nlu",
-        description="Clinical NLU intent models: train, parse, inspect.",
+        description="Clinical NLU intent models: train, parse, inspect, list-intents.",
     )
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {_package_version()}"
@@ -83,6 +97,11 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     inspect_parser.add_argument("--model", type=Path, default=Path(DEFAULT_BUNDLE))
     inspect_parser.set_defaults(func=_run_inspect)
+
+    list_parser = subparsers.add_parser(
+        "list-intents", help="list registered and plugin-discovered intents"
+    )
+    list_parser.set_defaults(func=_run_list_intents)
     return parser
 
 
@@ -132,5 +151,20 @@ def _run_inspect(args: argparse.Namespace) -> int:
             f"{name}: label={trained.spec.label} "
             f"min_confidence={trained.spec.min_confidence} "
             f"required={required} entity_labels={entity_labels}"
+        )
+    return 0
+
+
+def _run_list_intents(args: argparse.Namespace) -> int:
+    specs = list_intent_specs()
+    for spec in specs:
+        source = "built-in" if spec in INTENT_SPECS else "external"
+        model_name = f"{spec.model_cls.__module__}.{spec.model_cls.__qualname__}"
+        entity_labels = ", ".join(sorted(spec.entity_map)) or "-"
+        required = ", ".join(spec.required_fields) or "-"
+        print(
+            f"{spec.name} ({source}): label={spec.label} model={model_name} "
+            f"min_confidence={spec.min_confidence} required={required} "
+            f"entity_labels={entity_labels}"
         )
     return 0

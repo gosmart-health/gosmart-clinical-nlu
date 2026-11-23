@@ -1,3 +1,4 @@
+<!--suppress ALL -->
 # gosmart-clinical-nlu
 
 Clinical NLU library shared across peer projects (Python, managed with [uv](https://docs.astral.sh/uv/)).
@@ -14,11 +15,11 @@ package rather than the working directory:
 │   └── gosmart_clinical_nlu/   # the importable package (underscores — required by Python)
 │       ├── __init__.py         # public API re-exports
 │       ├── core.py
-│       ├── cli.py              # train / parse / inspect subcommands
+│       ├── cli.py              # train / parse / inspect / list-intents subcommands
 │       ├── training.py         # training-data schemas + loaders (per-intent & aggregated)
 │       ├── pipeline.py         # per-intent pipeline training + single-file bundle
 │       ├── parsing.py          # parse_utterance dispatch + result envelope
-│       ├── intents/            # per-intent pydantic slot models + registry
+│       ├── intents/            # per-intent pydantic slot models + extensible registry
 │       └── __main__.py
 ├── training/                   # training data (JSON) — see docs/training.md
 ├── tests/                      # test suite (pytest)
@@ -70,7 +71,8 @@ packed into a single artifact file that peer projects load with
 ### Command line (repo checkout)
 
 ```bash
-uv run gosmart-clinical-nlu train      # ./training -> models/intent_models.zip
+uv run gosmart-clinical-nlu list-intents   # show built-in & plugin-discovered intents
+uv run gosmart-clinical-nlu train          # ./training -> models/intent_models.zip
 uv run gosmart-clinical-nlu inspect --model models/intent_models.zip
 uv run gosmart-clinical-nlu parse --model models/intent_models.zip \
     "Find a CT patient 12345678 from yesterday" --ref-date 2026-11-19
@@ -97,10 +99,56 @@ AND all `required_fields` to be extracted. On `low_confidence` the best-effort
 `data` is still returned and `candidates` carries every intent's score, so a
 caller can fail over to an LLM playbook with full context.
 
+### Defining custom intents in a peer project
+
+Peer projects can define and train new Pydantic intent models **without
+modifying `gosmart-clinical-nlu`**. `ParsedUtterance.data` accepts any Pydantic
+`BaseModel` subclass (and preserves all subclass fields during JSON/dict
+serialization).
+
+Register custom intents either declaratively via `pyproject.toml` entry points
+(recommended — automatically discovered by `gosmart-clinical-nlu train`,
+`parse`, `inspect`, `list-intents`, and the Python API):
+
+```toml
+# peer-project/pyproject.toml
+[project.entry-points."gosmart_clinical_nlu.intents"]
+order_exam = "my_peer_pkg.intents.order_exam:ORDER_EXAM_SPEC"
+```
+
+or programmatically at runtime:
+
+```python
+from pydantic import BaseModel
+from gosmart_clinical_nlu import EntityBinding, IntentSpec, register_intent_spec
+from gosmart_clinical_nlu.intents.normalizers import normalize_patient_id
+
+
+class OrderExamIntent(BaseModel):
+    patient_id: str | None = None
+
+
+ORDER_EXAM_SPEC = IntentSpec(
+    name="order_exam",
+    label="ORDER_EXAM",
+    model_cls=OrderExamIntent,
+    entity_map={
+        "PATIENT_ID": EntityBinding(field="patient_id", normalize=normalize_patient_id),
+    },
+    description="Place an imaging exam order.",
+)
+
+register_intent_spec(ORDER_EXAM_SPEC)
+```
+
+See [`docs/training.md`](docs/training.md) §7 for the full step-by-step guide
+on authoring custom intent models, structuring training data, and training
+bundles in a peer project.
+
 ### Training data and operations
 
-- Training data formats, the train/verify/deploy procedure, and
-  troubleshooting live in [`docs/training.md`](docs/training.md).
+- Training data formats, external intent authoring, the train/verify/deploy
+  procedure, and troubleshooting live in [`docs/training.md`](docs/training.md).
 - Architecture notes: [`docs/design_notes/intent_nlu_design.md`](docs/design_notes/intent_nlu_design.md).
 - The artifact is a ZIP of one spaCy `to_disk()` tree per intent plus a
   `manifest.json` (spaCy version, content hash of the training data,
@@ -119,7 +167,7 @@ uv add "gosmart-clinical-nlu @ git+https://github.com/gosmart-health/gosmart-cli
 uv add "gosmart-clinical-nlu @ git+https://github.com/gosmart-health/gosmart-clinical-nlu.git@dev"
 
 # pinned to a tag/release
-uv add "gosmart-clinical-nlu @ git+https://github.com/gosmart-health/gosmart-clinical-nlu.git@v0.1.0"
+uv add "gosmart-clinical-nlu @ git+https://github.com/gosmart-health/gosmart-clinical-nlu.git@v0.2.0"
 
 # or, while iterating locally on a sibling clone
 uv add --editable ../gosmart-clinical-nlu
@@ -133,7 +181,7 @@ cannot contain hyphens, so the import name is `gosmart_clinical_nlu`:
 ```python
 import gosmart_clinical_nlu
 
-gosmart_clinical_nlu.__version__  # '0.1.0'
+gosmart_clinical_nlu.__version__  # '0.2.0'
 
 # The public API is re-exported at the package root:
 from gosmart_clinical_nlu import print_hi

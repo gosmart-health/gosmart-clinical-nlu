@@ -15,6 +15,17 @@ Intent NLU quickstart::
 
 from gosmart_clinical_nlu.cli import main
 from gosmart_clinical_nlu.core import print_hi
+from gosmart_clinical_nlu.intents import (
+    DEFAULT_MIN_CONFIDENCE,
+    INTENT_ENTRY_POINT_GROUP,
+    EntityBinding,
+    IntentSpec,
+    discover_intent_specs,
+    get_intent_spec,
+    list_intent_specs,
+    register_intent_spec,
+    unregister_intent_spec,
+)
 from gosmart_clinical_nlu.parsing import ParsedUtterance, parse_utterance
 from gosmart_clinical_nlu.pipeline import (
     IntentModels,
@@ -25,14 +36,23 @@ from gosmart_clinical_nlu.pipeline import (
 from gosmart_clinical_nlu.training import load_training_dir
 
 __all__ = [
+    "DEFAULT_MIN_CONFIDENCE",
+    "INTENT_ENTRY_POINT_GROUP",
+    "EntityBinding",
     "IntentModels",
+    "IntentSpec",
     "ParsedUtterance",
+    "discover_intent_specs",
+    "get_intent_spec",
+    "list_intent_specs",
     "load_intent_models",
     "load_training_dir",
     "main",
     "parse_utterance",
     "print_hi",
+    "register_intent_spec",
     "save_bundle",
     "train_intent_models",
+    "unregister_intent_spec",
 ]
-__version__ = "0.1.0"
+__version__ = "0.2.0"

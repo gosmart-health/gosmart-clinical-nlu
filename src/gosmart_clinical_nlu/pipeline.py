@@ -227,8 +227,9 @@ def load_intent_models(path: Path | str) -> IntentModels:
                 base_spec = get_intent_spec(entry.name)
             except KeyError as error:
                 raise TrainingDataError(
-                    f"{path}: bundle intent {entry.name!r} is not registered in this "
-                    f"gosmart-clinical-nlu version ({error})"
+                    f"{path}: bundle intent {entry.name!r} is not registered; "
+                    f"install the package providing this intent or register it via "
+                    f"register_intent_spec() ({error})"
                 ) from None
             spec = base_spec.with_overrides(
                 description=entry.description,

@@ -8,7 +8,7 @@ import gosmart_clinical_nlu
 
 
 def test_version_is_exposed() -> None:
-    assert gosmart_clinical_nlu.__version__ == "0.1.0"
+    assert gosmart_clinical_nlu.__version__ == "0.2.0"
 
 
 def test_public_api_reexports_core() -> None:
@@ -17,10 +17,22 @@ def test_public_api_reexports_core() -> None:
 
 def test_public_api_reexports_intent_nlu() -> None:
     for name in (
-        "parse_utterance",
-        "load_intent_models",
-        "train_intent_models",
+        "DEFAULT_MIN_CONFIDENCE",
+        "EntityBinding",
+        "INTENT_ENTRY_POINT_GROUP",
+        "IntentModels",
+        "IntentSpec",
         "ParsedUtterance",
+        "discover_intent_specs",
+        "get_intent_spec",
+        "list_intent_specs",
+        "load_intent_models",
+        "load_training_dir",
+        "parse_utterance",
+        "register_intent_spec",
+        "save_bundle",
+        "train_intent_models",
+        "unregister_intent_spec",
     ):
         assert hasattr(gosmart_clinical_nlu, name), name
 

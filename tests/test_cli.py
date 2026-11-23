@@ -53,6 +53,14 @@ def test_inspect(tmp_path: Path, capsys, training_dir_factory) -> None:
     assert "GET_REPORT" in out
 
 
+def test_list_intents(capsys) -> None:
+    assert main(["list-intents"]) == 0
+    out = str(capsys.readouterr().out)
+    assert "find_study (built-in):" in out
+    assert "get_report (built-in):" in out
+    assert "StudyQueryIntent" in out
+
+
 def test_parse_missing_bundle(tmp_path: Path, capsys) -> None:
     exit_code = main(["parse", "--model", str(tmp_path / "nope.zip"), "hello"])
     assert exit_code == 1

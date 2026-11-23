@@ -1,6 +1,6 @@
 [project]
 name = "gosmart-clinical-nlu"
-version = "0.1.0"
+version = "0.2.0"
 description = "Clinical NLU library shared across peer projects"
 readme = "README.md"
 license = "Apache-2.0"
